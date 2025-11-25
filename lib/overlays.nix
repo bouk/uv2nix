@@ -20,25 +20,23 @@ let
     ;
   inherit (pyproject-nix.lib) pep440 pep508;
 
-  /*
-    Compute synthetic conflict extras from the lock's conflicts and the dependency spec.
-
-    UV uses synthetic markers like `extra == 'group-<len>-<package>-<group>'` in resolution-markers
-    to distinguish packages from different conflict groups. When resolving dependencies, we need
-    to include these synthetic extras in the environment so the markers evaluate correctly.
-
-    The encoding format is defined in UV's source code:
-    https://github.com/astral-sh/uv/blob/main/crates/uv-resolver/src/universal_marker.rs
-
-    Specifically, the `encode_package_extra` and `encode_package_group` functions generate:
-    - For extras: `extra-{package_len}-{package}-{extra}`
-    - For groups: `group-{package_len}-{package}-{group}`
-
-    Where `package_len` is the length of the package name in bytes, which ensures
-    unambiguous parsing since `-` is valid in package/extra names.
-
-    See https://github.com/pyproject-nix/uv2nix/issues/265
-  */
+  # Compute synthetic conflict extras from the lock's conflicts and the dependency spec.
+  #
+  # UV uses synthetic markers like `extra == 'group-<len>-<package>-<group>'` in resolution-markers
+  # to distinguish packages from different conflict groups. When resolving dependencies, we need
+  # to include these synthetic extras in the environment so the markers evaluate correctly.
+  #
+  # The encoding format is defined in UV's source code:
+  # https://github.com/astral-sh/uv/blob/main/crates/uv-resolver/src/universal_marker.rs
+  #
+  # Specifically, the `encode_package_extra` and `encode_package_group` functions generate:
+  # - For extras: `extra-{package_len}-{package}-{extra}`
+  # - For groups: `group-{package_len}-{package}-{group}`
+  #
+  # Where `package_len` is the length of the package name in bytes, which ensures
+  # unambiguous parsing since `-` is valid in package/extra names.
+  #
+  # See https://github.com/pyproject-nix/uv2nix/issues/265
   computeConflictExtras =
     {
       conflicts,
