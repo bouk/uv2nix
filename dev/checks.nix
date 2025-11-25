@@ -280,7 +280,6 @@ let
         '';
       };
 
-      # Test that selecting both conflicting groups results in an error
       conflictsIndexBoth =
         let
           root = ../lib/fixtures/conflicts-index;
@@ -297,7 +296,6 @@ let
             };
           };
 
-          # Construct package set and try to build it - this should fail
           pythonSet =
             (pkgs.callPackage pyproject-nix.build.packages {
               python = interpreter;
@@ -309,8 +307,6 @@ let
                 ]
               );
 
-          # Force evaluation by accessing the conflicts-index package
-          # Expected error: "Conflict resolution selected more than one conflict specifier, resolution still ambigious"
           result = builtins.tryEval (builtins.deepSeq pythonSet.conflicts-index pythonSet.conflicts-index);
         in
         runCommand "check-conflicts-index-both-groups-fail" { } (
