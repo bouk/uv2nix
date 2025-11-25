@@ -14,8 +14,46 @@ let
     mapAttrs
     any
     optionalAttrs
+    concatMap
+    filter
+    elem
     ;
   inherit (pyproject-nix.lib) pep440 pep508;
+
+  /*
+    Compute synthetic conflict extras from the lock's conflicts and the dependency spec.
+
+    UV uses synthetic markers like `extra == 'group-10-<package>-<group>'` in resolution-markers
+    to distinguish packages from different conflict groups. When resolving dependencies, we need
+    to include these synthetic extras in the environment so the markers evaluate correctly.
+
+    See https://github.com/pyproject-nix/uv2nix/issues/265
+  */
+  computeConflictExtras =
+    {
+      conflicts,
+      spec,
+    }:
+    concatMap (
+      conflict:
+      concatMap (
+        def:
+        let
+          extras' = spec.${def.package} or [ ];
+          # Check if this conflict definition is selected in the spec
+          isSelected = elem (def.extra or def.group) extras';
+          # Generate the synthetic extra name that UV uses in resolution-markers
+          syntheticExtra =
+            if def ? group then
+              "group-10-${def.package}-${def.group}"
+            else if def ? extra then
+              "extra-10-${def.package}-${def.extra}"
+            else
+              null;
+        in
+        if isSelected && syntheticExtra != null then [ syntheticExtra ] else [ ]
+      ) conflict
+    ) conflicts;
 
   mkOverlay' =
     {
@@ -31,14 +69,21 @@ let
     let
       inherit (final) callPackage;
 
+      # Compute synthetic extras for selected conflicts
+      conflictExtras = computeConflictExtras {
+        conflicts = uvLock.conflicts;
+        inherit spec;
+      };
+
       # Note: Using Python from final here causes infinite recursion.
       # There is no correct way to override the python interpreter from within the set anyway,
       # so all facts that we get from the interpreter derivation are still the same.
       environ' = pep508.setEnviron (pep508.mkEnviron prev.python) (
         environ
-        // optionalAttrs (!environ ? extra) {
-          # Set a default empty list of extras so any marker evaluation that uses the extra field won't crash.
-          extra = [ ];
+        // {
+          # Include both user-provided extras and synthetic conflict extras
+          # so that resolution-markers with conflict extras evaluate correctly.
+          extra = (environ.extra or [ ]) ++ conflictExtras;
         }
       );
       pythonVersion = environ'.python_full_version.value;
