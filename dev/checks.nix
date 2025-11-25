@@ -280,6 +280,51 @@ let
         '';
       };
 
+      # Test that selecting both conflicting groups results in an error
+      conflictsIndexBoth =
+        let
+          root = ../lib/fixtures/conflicts-index;
+          ws = uv2nix.workspace.loadWorkspace { workspaceRoot = root; };
+          interpreter = pkgs.python312;
+
+          overlay = ws.mkPyprojectOverlay {
+            sourcePreference = "wheel";
+            dependencies = {
+              conflicts-index = [
+                "group-a"
+                "group-b"
+              ];
+            };
+          };
+
+          # Construct package set and try to build it - this should fail
+          pythonSet =
+            (pkgs.callPackage pyproject-nix.build.packages {
+              python = interpreter;
+            }).overrideScope
+              (
+                lib.composeManyExtensions [
+                  buildSystems
+                  overlay
+                ]
+              );
+
+          # Force evaluation by accessing the conflicts-index package
+          result = builtins.tryEval (builtins.seq pythonSet.conflicts-index pythonSet.conflicts-index);
+        in
+        runCommand "check-conflicts-index-both-groups-fail" { } (
+          if result.success then
+            ''
+              echo "ERROR: Selecting both group-a and group-b should have failed!"
+              exit 1
+            ''
+          else
+            ''
+              echo "OK: Selecting both conflicting groups correctly failed"
+              touch $out
+            ''
+        );
+
       dynamicVersion = mkCheck {
         name = "dynamic-version";
         root = ../lib/fixtures/dynamic-version;
