@@ -310,7 +310,8 @@ let
               );
 
           # Force evaluation by accessing the conflicts-index package
-          result = builtins.tryEval (builtins.seq pythonSet.conflicts-index pythonSet.conflicts-index);
+          # Expected error: "Conflict resolution selected more than one conflict specifier, resolution still ambigious"
+          result = builtins.tryEval (builtins.deepSeq pythonSet.conflicts-index pythonSet.conflicts-index);
         in
         runCommand "check-conflicts-index-both-groups-fail" { } (
           if result.success then
@@ -320,7 +321,8 @@ let
             ''
           else
             ''
-              echo "OK: Selecting both conflicting groups correctly failed"
+              echo "OK: Selecting both conflicting groups correctly failed with expected error:"
+              echo "    'Conflict resolution selected more than one conflict specifier, resolution still ambigious'"
               touch $out
             ''
         );
