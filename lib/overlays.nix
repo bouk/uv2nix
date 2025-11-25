@@ -23,9 +23,19 @@ let
   /*
     Compute synthetic conflict extras from the lock's conflicts and the dependency spec.
 
-    UV uses synthetic markers like `extra == 'group-10-<package>-<group>'` in resolution-markers
+    UV uses synthetic markers like `extra == 'group-<len>-<package>-<group>'` in resolution-markers
     to distinguish packages from different conflict groups. When resolving dependencies, we need
     to include these synthetic extras in the environment so the markers evaluate correctly.
+
+    The encoding format is defined in UV's source code:
+    https://github.com/astral-sh/uv/blob/main/crates/uv-resolver/src/universal_marker.rs
+
+    Specifically, the `encode_package_extra` and `encode_package_group` functions generate:
+    - For extras: `extra-{package_len}-{package}-{extra}`
+    - For groups: `group-{package_len}-{package}-{group}`
+
+    Where `package_len` is the length of the package name in bytes, which ensures
+    unambiguous parsing since `-` is valid in package/extra names.
 
     See https://github.com/pyproject-nix/uv2nix/issues/265
   */
@@ -42,12 +52,14 @@ let
           extras' = spec.${def.package} or [ ];
           # Check if this conflict definition is selected in the spec
           isSelected = elem (def.extra or def.group) extras';
+          # Package name length in bytes, as used by UV's encoding
+          packageLen = toString (builtins.stringLength def.package);
           # Generate the synthetic extra name that UV uses in resolution-markers
           syntheticExtra =
             if def ? group then
-              "group-10-${def.package}-${def.group}"
+              "group-${packageLen}-${def.package}-${def.group}"
             else if def ? extra then
-              "extra-10-${def.package}-${def.extra}"
+              "extra-${packageLen}-${def.package}-${def.extra}"
             else
               null;
         in
