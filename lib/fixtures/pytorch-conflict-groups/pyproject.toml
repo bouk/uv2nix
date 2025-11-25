@@ -1,0 +1,26 @@
+[project]
+name = "pytorch-conflict-groups"
+version = "0.0.0"
+description = "Test project for issue #265 - conflict groups with resolution markers"
+dependencies = []
+requires-python = ">=3.12,<3.13"
+
+[dependency-groups]
+cuda = [
+    "arpeggio==2.0.0",
+]
+cpu = [
+    "arpeggio==2.0.1",
+]
+
+[tool.uv]
+conflicts = [
+    [
+      { group = "cuda" },
+      { group = "cpu" },
+    ],
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"

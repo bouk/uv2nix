@@ -427,6 +427,29 @@ let
           test "$(python -c 'import workspace_with_legacy')" == "legacy-package"
         '';
       };
+
+      # Test for issue #265: conflict groups with resolution-markers using extra == 'group-...' markers
+      pytorch-conflict-groups-cpu = mkCheck {
+        name = "pytorch-conflict-groups-cpu";
+        root = ../lib/fixtures/pytorch-conflict-groups;
+        spec = {
+          pytorch-conflict-groups = [ "cpu" ];
+        };
+        check = ''
+          python -c 'import arpeggio; assert arpeggio.__version__ == "2.0.1"'
+        '';
+      };
+
+      pytorch-conflict-groups-cuda = mkCheck {
+        name = "pytorch-conflict-groups-cuda";
+        root = ../lib/fixtures/pytorch-conflict-groups;
+        spec = {
+          pytorch-conflict-groups = [ "cuda" ];
+        };
+        check = ''
+          python -c 'import arpeggio; assert arpeggio.__version__ == "2.0.0"'
+        '';
+      };
     };
 in
 # Generate test matrix:
